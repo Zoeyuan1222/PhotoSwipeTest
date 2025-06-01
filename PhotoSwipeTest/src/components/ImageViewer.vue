@@ -6,14 +6,11 @@
       :href="image.largeURL"
       :data-pswp-width="image.width"
       :data-pswp-height="image.height"
-      :data-pswp-caption="image.captionHTML || image.captionText || ''"
+      :data-pswp-caption="image.captionText || ''"
       class="pswp-gallery__item"
       rel="noreferrer"
     >
     <img :src="image.thumbnailURL" :alt="image.captionText || `Image ${key + 1} thumbnail`" />
-    <div v-if="image.captionHTML" class="hidden-caption-content" style="display: none;">
-      {{ image.captionHTML }}
-    </div>
     </a>
   </div>
 </template>
@@ -23,31 +20,38 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import PhotoSwipeLightbox from 'photoswipe/lightbox';
 import 'photoswipe/style.css';
 
+// 定义图片对象的数据结构
 interface ImageItem {
-  largeURL: string;
-  thumbnailURL: string;
-  width: number;
-  height: number;
+  largeURL: string; // 大图的 URL
+  thumbnailURL: string; // 缩略图的 URL
+  width: number; // 大图宽度
+  height: number; // 大图高度
   captionText?: string; // 用于 alt 和备用标题
-  captionHTML?: string; // 用于自定义标题的 HTML 内容
 }
 
+// 定义组件的props
 interface Props {
-  galleryID: string;
-  images: ImageItem[];
+  galleryID: string; // 画廊的唯一 ID (用于初始化 PhotoSwipe)
+  images: ImageItem[]; // 图片数据数组
 }
-const props = defineProps<Props>();
+const props = defineProps<Props>()
 
-const imagesData = ref(props.images);
+const imagesData = ref(props.images)
 
+// 监听传入的图片数据（props.images）是否变化，并同步更新本地响应式数据（imagesData）
+// 以便组件内部逻辑（如 lightbox 显示）能响应这些变化。
 watch(() => props.images, (newImages) => {
-  imagesData.value = newImages;
-  // 考虑在图片数据变化时如何更新 lightbox，可能需要销毁重建
-}, { deep: true });
+  imagesData.value = newImages
+  initializeLightbox();
+}, { deep: true })
 
+// 创建一个名为 'lightbox' 的响应式引用，用于存储 PhotoSwipeLightbox 的实例。
+// 它初始化为 'null'，在 PhotoSwipe 初始化后会被赋值为其实例。
 const lightbox = ref<PhotoSwipeLightbox | null>(null);
 
+// 负责 PhotoSwipe 灯箱的设置和初始化
 function initializeLightbox() {
+  // 销毁之前的 PhotoSwipe 灯箱，重新初始化
   if (lightbox.value) {
     lightbox.value.destroy();
     lightbox.value = null;
@@ -55,17 +59,17 @@ function initializeLightbox() {
 
   if (props.galleryID && imagesData.value.length > 0) {
     const options = {
-      gallery: '#' + props.galleryID,
-      children: '.pswp-gallery__item', // 更新 children 选择器以匹配 <a> 标签上的类
-      pswpModule: () => import('photoswipe'), // 动态导入 PhotoSwipe 模块
+      gallery: '#' + props.galleryID, // CSS 选择器，指向画廊的容器
+      children: '.pswp-gallery__item', // CSS 选择器，指向单个画廊项目
+      pswpModule: () => import('photoswipe'), // 动态导入 PhotoSwipe 核心模块，按需加载
     };
 
+    // 使用指定的选项创建一个新的 PhotoSwipeLightbox 实例。
     const localLightbox = new PhotoSwipeLightbox(options);
 
     localLightbox.on('uiRegister', function() {
       if (!localLightbox.pswp) return;
-
-      // --- 注册项目符号指示器 (代码来自上一个回答，保持不变) ---
+      // --- 注册项目符号指示器 ---
       localLightbox.pswp.ui.registerElement({
         name: 'bulletsIndicator',
         className: 'pswp__bullets-indicator',
